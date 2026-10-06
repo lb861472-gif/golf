@@ -1,0 +1,55 @@
+workflows:
+  golfsim-ios:
+    name: GolfSim iOS
+    instance_type: mac_mini_m2
+    max_build_duration: 30
+    environment:
+      xcode: latest
+    scripts:
+      - name: Show Xcode version
+        script: xcodebuild -version
+
+      - name: Install XcodeGen
+        script: |
+          if ! command -v xcodegen >/dev/null 2>&1; then
+            brew install xcodegen
+          fi
+
+      - name: Generate Xcode project
+        script: xcodegen generate
+
+      - name: Archive (unsigned)
+        script: |
+          set -o pipefail
+          mkdir -p build
+          xcodebuild archive \
+            -project GolfSim.xcodeproj \
+            -scheme GolfSim \
+            -configuration Release \
+            -sdk iphoneos \
+            -destination 'generic/platform=iOS' \
+            -archivePath "$CM_BUILD_DIR/build/GolfSim.xcarchive" \
+            CODE_SIGNING_ALLOWED=NO \
+            CODE_SIGNING_REQUIRED=NO \
+            CODE_SIGN_IDENTITY="" \
+            > "$CM_BUILD_DIR/build/xcodebuild.log" 2>&1 || {
+              echo "---- Build failed. Errors: ----"
+              grep -E "error:|\*\* ARCHIVE FAILED" "$CM_BUILD_DIR/build/xcodebuild.log" | sort -u | head -n 60
+              exit 1
+            }
+          tail -n 5 "$CM_BUILD_DIR/build/xcodebuild.log"
+
+      - name: Package .ipa
+        script: |
+          set -e
+          APP=$(find "$CM_BUILD_DIR/build/GolfSim.xcarchive/Products/Applications" -maxdepth 1 -name "*.app" | head -n 1)
+          test -n "$APP" || { echo "No .app found in archive"; exit 1; }
+          rm -rf "$CM_BUILD_DIR/Payload"
+          mkdir -p "$CM_BUILD_DIR/Payload"
+          cp -R "$APP" "$CM_BUILD_DIR/Payload/"
+          cd "$CM_BUILD_DIR"
+          zip -qry GolfSim.ipa Payload
+
+    artifacts:
+      - GolfSim.ipa
+      - build/xcodebuild.log
