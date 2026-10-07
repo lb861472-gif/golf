@@ -3,8 +3,8 @@
 3D golf simulator for iOS (SwiftUI + SceneKit + CoreMotion + CoreBluetooth). No external assets.
 
 ## Build the unsigned .ipa
-1. Push this folder to a GitHub repo (branch `main`).
-2. Open the **Actions** tab -> "Build unsigned IPA" (runs on every push, or press *Run workflow*).
+1. Push this folder to a tool (ex. codemagic)
+2. Open the **Actions** tab -> "Build unsigned IPA" 
 3. Download the `GolfSim-unsigned-ipa` artifact, unzip it, and sideload `GolfSim.ipa` with SideStore / AltStore.
 
 ## BLE controller protocol
